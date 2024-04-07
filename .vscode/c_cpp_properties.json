@@ -1,0 +1,19 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "_DEBUG",
+                "UNICODE",
+                "_UNICODE"
+            ],
+            "configurationProvider": "ms-vscode.makefile-tools",
+            "compilerPath": "C:/Users/Steven.du/mingw64/bin/g++.exe",
+            "intelliSenseMode": "gcc-x64"
+        }
+    ],
+    "version": 4
+}
