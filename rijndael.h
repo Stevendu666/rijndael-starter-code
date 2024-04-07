@@ -29,9 +29,9 @@ unsigned char *aes_decrypt_block(unsigned char *ciphertext, unsigned char *key);
 
 
 // Declaration of s_box, inv_s_box, and RCON arrays
-extern unsigned char s_box[];
-extern unsigned char inv_s_box[];
-extern unsigned char RCON[];
+extern unsigned char s_box[256];
+extern unsigned char inv_s_box[256];
+extern unsigned char RCON[11];
 
 // Declaration of gmul function
 unsigned char gmul(unsigned char a, unsigned char b);
