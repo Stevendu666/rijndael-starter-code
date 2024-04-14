@@ -47,8 +47,22 @@ typedef enum {
     AES_CYPHER_128,
 } AES_CYPHER_T;
 
-unsigned char* aes_encrypt_block(AES_CYPHER_T mode, unsigned char *plaintext, int len, unsigned char *key);
-unsigned char* aes_decrypt_block(AES_CYPHER_T mode, unsigned char *ciphertext, int len, unsigned char *key);
+typedef struct {
+    unsigned char *data;
+    unsigned char *output;
+    // unsigned char *cyphertext;
+    // unsigned char *recovered_text;
+} CipherResult;
+
+typedef struct {
+    unsigned char *data;
+    unsigned char *recovered;
+} DecryptionResult;
+
+CipherResult aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, unsigned char *key);
+DecryptionResult aes_decrypt_block(AES_CYPHER_T mode, unsigned char *ciphertext, int len, unsigned char *key);
+// unsigned char* aes_encrypt_block(AES_CYPHER_T mode, unsigned char *plaintext, int len, unsigned char *key);
+// unsigned char* aes_decrypt_block(AES_CYPHER_T mode, unsigned char *ciphertext, int len, unsigned char *key);
 
 void aes_cypher_128_test();
 

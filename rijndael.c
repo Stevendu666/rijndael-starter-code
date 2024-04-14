@@ -300,7 +300,7 @@ unsigned char *outputtext(char *msg, unsigned char *data, int len)
         printf("%d ", decimal_value);
     }
 
-    printf("\n!!!!!!!!!\n");
+    printf("\n\n################ %s ###############\n", msg);
 
     for (int i = 0; i < len; i++)
     {
@@ -309,19 +309,14 @@ unsigned char *outputtext(char *msg, unsigned char *data, int len)
         printf("%d ", decimal_cypher[i]);
     }
 
-    // 打印返回值
-    printf("\nReturn value inside: ");
-    for (int i = 0; i < len; i++)
-    {
-        printf("%d ", decimal_cypher[i]);
+    printf("\n");
 
-        return decimal_cypher[i];
-    }
-
+    return decimal_cypher;
 }
 
-unsigned char *aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, unsigned char *key)
+CipherResult aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, unsigned char *key)
 {
+    unsigned char *output = malloc(BLOCK_SIZE * sizeof(unsigned char));
     unsigned char w[4 * 4 * 15] = {0}; /* round key */
 
     int nr, i, j;
@@ -374,17 +369,28 @@ unsigned char *aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len
             dump("  state", s, 4 * num_col[mode]);
         }
 
-        /* save state (cypher) to user buffer */
-        for (j = 0; j < 4 * num_col[mode]; j++)
-            data[i + j] = s[j];
-        printf("Output:\n");
-        dump("cypher", &data[i], 4 * num_col[mode]);
-        unsigned char *output;
-        output = outputtext("cyphertext", &data[i], 4 * num_col[mode]);
+                /* save state (cypher) to user buffer */
+                for (j = 0; j < 4 * num_col[mode]; j++)
+                    data[i + j] = s[j];
+                printf("Output:\n");
+                dump("cypher", &data[i], 4 * num_col[mode]);
+                outputtext("CIPHERTEXT", &data[i], 4 * num_col[mode]);
+        //     }
+
+        //     //
+        //     return output;
+        // }
+
+        /* save state (cypher) to output buffer */
+        for (j = 0; j < 4 * 4; j++)
+            output[i + j] = s[j];
     }
 
-    //
-    return data;
+    CipherResult result;
+    result.data = data;
+    result.output = output;
+
+    return result;
 }
 
 void inv_shift_rows(AES_CYPHER_T mode, unsigned char *state)
@@ -448,8 +454,10 @@ void inv_mix_columns(AES_CYPHER_T mode, unsigned char *state)
     }
 }
 
-unsigned char *aes_decrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, unsigned char *key)
+DecryptionResult aes_decrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, unsigned char *key)
 {
+
+    unsigned char *recovered = malloc(len * sizeof(unsigned char));
     unsigned char w[4 * 4 * 15] = {0}; /* round key */
     unsigned char s[4 * 4] = {0};      /* state */
 
@@ -503,13 +511,16 @@ unsigned char *aes_decrypt_block(AES_CYPHER_T mode, unsigned char *data, int len
 
         /* save state (cypher) to user buffer */
         for (j = 0; j < 4 * num_col[mode]; j++)
-            data[i + j] = s[j];
+            recovered[i + j] = s[j];
         printf("Output:\n");
-        dump("plain", &data[i], 4 * num_col[mode]);
-        outputtext("plaintext", &data[i], 4 * num_col[mode]);
+        dump("plain", &recovered[i], 4 * num_col[mode]);
+        outputtext("RECOVERED PLAINTEXT", &recovered[i], 4 * num_col[mode]);
     }
 
-    return data;
+    DecryptionResult result;
+    result.data = data;
+    result.recovered = recovered;
+    return result;
 }
 
 void aes_cypher_128_test()
