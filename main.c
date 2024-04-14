@@ -1,3 +1,16 @@
+/*
+ * TODO: Yuanshuo Du, D22125495, 
+ 
+  this is the main file that includes the test file and the rijndael.h file.
+  The main file tests the AES encryption and decryption functions using a 128-bit key.
+  The main file includes the print_128bit_block function to print a 128-bit block in a human-readable format.
+
+
+ */
+
+
+
+
 #include <stdio.h>
 
 #include <stdlib.h>

@@ -1,3 +1,23 @@
+/*
+ * TODO: Yuanshuo Du, D22125495, 
+    * This file contains the test functions for the Rijndael (AES) encryption algorithm.
+    * The test functions are used to test the individual components of the AES algorithm,
+    * such as the substitution box, key expansion, and encryption/decryption functions.
+    * The test functions print the input values, expected output, actual output, and the test result (Passed/Failed).
+    * The test functions are called from the main test function in main.c.
+    * 
+    * The test functions include:
+    * - test_sub_sbox(): Tests the sub_sbox function.
+    * - test_sub_dword(): Tests the sub_dword function.
+    * - test_rot_dword(): Tests the rot_dword function.
+    * - test_swap_dword(): Tests the swap_dword function.
+    * - test_expand_key(): Tests the expand_key function.
+    * - test_add_round_key(): Tests the add_round_key function.
+    * - test_sub_bytes(): Tests the sub_bytes function.
+    * - aes_cypher_128_test(): Tests the AES 128-bit cipher encryption and decryption.
+    * - runtest(): Calls all the test functions to run the tests.
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
