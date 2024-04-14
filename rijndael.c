@@ -1,6 +1,12 @@
 /*
- * TODO: Add your name and student number here, along with
- *       a brief description of this code.
+ * TODO: Yuanshuo Du, D22125495, 
+ implement the AES cipher algorithm for encryption and decryption. 
+ It includes functions for key expansion, round operations (AddRoundKey, SubBytes, ShiftRows, MixColumns), 
+ and test cases for the AES-128 cipher. 
+ The code uses lookup tables (S-Box, Rcon) and bitwise operations to perform the necessary transformations 
+ on the input data.
+
+    * The AES cipher is a symmetric encryption algorithm that operates on blocks of data.
  */
 
 #include <stdlib.h>
@@ -14,6 +20,14 @@
 /*
  * Encryption Rounds
  */
+/**
+ * @brief This section defines the key size, number of rounds, number of columns, and number of keys for the AES cipher.
+ *
+ * The AES cipher is a symmetric encryption algorithm that operates on blocks of data. It supports different key sizes,
+ * number of rounds, number of columns, and number of keys. This section provides the values for these parameters for
+ * the AES cipher with a key size of 128 bits.
+ */
+
 int key_bits[] = {
     /* AES_CYPHER_128 */ 128,
 };
@@ -29,6 +43,7 @@ int num_k[] = {
 int num_col[] = {
     /* AES_CYPHER_128 */ 4,
 };
+
 
 /*
  * aes Rcon:
@@ -87,23 +102,44 @@ static const unsigned char inv_sbox[256] = {
     0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d};
 
+
+/**
+ * Substitutes each byte of the input value with the corresponding value from the S-Box.
+ *
+ * @param val The input value.
+ * @return The substituted value.
+ */
 unsigned char sub_sbox(unsigned char val)
 {
     return s_box[val];
 }
 
+
+/**
+ * Substitutes each byte of the input value with the corresponding value from the S-Box.
+ *
+ * @param val The input value.
+ * @return The substituted value.
+ */
 unsigned int sub_dword(unsigned int val)
 {
     unsigned int tmp = 0;
 
-    tmp |= ((unsigned int)sub_sbox((unsigned char)((val >> 0) & 0xFF))) << 0;
-    tmp |= ((unsigned int)sub_sbox((unsigned char)((val >> 8) & 0xFF))) << 8;
-    tmp |= ((unsigned int)sub_sbox((unsigned char)((val >> 16) & 0xFF))) << 16;
-    tmp |= ((unsigned int)sub_sbox((unsigned char)((val >> 24) & 0xFF))) << 24;
+    tmp |= (unsigned int)sub_sbox((unsigned char)((val >> 0) & 0xFF)) << 0;
+    tmp |= (unsigned int)sub_sbox((unsigned char)((val >> 8) & 0xFF)) << 8;
+    tmp |= (unsigned int)sub_sbox((unsigned char)((val >> 16) & 0xFF)) << 16;
+    tmp |= (unsigned int)sub_sbox((unsigned char)((val >> 24) & 0xFF)) << 24;
 
     return tmp;
 }
 
+
+/**
+ * Rotates the bytes of the input value to the left by one position.
+ *
+ * @param val The input value.
+ * @return The rotated value.
+ */
 unsigned int rot_dword(unsigned int val)
 {
     unsigned int tmp = val;
@@ -111,6 +147,13 @@ unsigned int rot_dword(unsigned int val)
     return (val >> 8) | ((tmp & 0xFF) << 24);
 }
 
+
+/**
+ * Swaps the bytes of the input value in a specific pattern.
+ *
+ * @param val The input value.
+ * @return The swapped value.
+ */
 unsigned int swap_dword(unsigned int val)
 {
     return (((val & 0x000000FF) << 24) |
@@ -118,6 +161,18 @@ unsigned int swap_dword(unsigned int val)
             ((val & 0x00FF0000) >> 8) |
             ((val & 0xFF000000) >> 24));
 }
+
+
+/**
+ * @brief Expands the key for the AES cipher.
+ *
+ * This function expands the given key for the AES cipher. It takes the mode (encryption or decryption),
+ * the key, and the round key as input parameters. The expanded key is stored in the round key array.
+ *
+ * @param mode The mode of the AES cipher (encryption or decryption).
+ * @param key The original key for the AES cipher.
+ * @param round The array to store the expanded key.
+ */
 
 /*
  * nr: number of rounds
@@ -132,17 +187,20 @@ void expand_key(AES_CYPHER_T mode, unsigned char *key, unsigned char *round)
     int i = 0;
 
     printf("Key Expansion:\n");
+    // Copy the initial key into the key schedule
     do
     {
         w[i] = *((unsigned int *)&key[i * 4 + 0]);
         printf("    %2.2d:  rs: %8.8x\n", i, swap_dword(w[i]));
     } while (++i < num_k[mode]);
 
+    // Perform key expansion
     do
     {
         printf("    %2.2d: ", i);
         if ((i % num_k[mode]) == 0)
         {
+            // Rotate, substitute, and xor the word
             t = rot_dword(w[i - 1]);
             printf(" rot: %8.8x", swap_dword(t));
             t = sub_dword(t);
@@ -153,14 +211,17 @@ void expand_key(AES_CYPHER_T mode, unsigned char *key, unsigned char *round)
         }
         else if (num_k[mode] > 6 && (i % num_k[mode]) == 4)
         {
+            // Only substitute the word
             t = sub_dword(w[i - 1]);
             printf(" sub: %8.8x", swap_dword(t));
         }
         else
         {
+            // Copy the word unchanged
             t = w[i - 1];
             printf(" equ: %8.8x", swap_dword(t));
         }
+        // XOR with the word num_k[mode] positions back and store in the key schedule
         w[i] = w[i - num_k[mode]] ^ t;
         printf(" rs: %8.8x\n", swap_dword(w[i]));
     } while (++i < num_col[mode] * (rounds[mode] + 1));
@@ -168,6 +229,15 @@ void expand_key(AES_CYPHER_T mode, unsigned char *key, unsigned char *round)
     /* key can be discarded (or zeroed) from memory */
 }
 
+
+/**
+ * Performs the AddRoundKey operation in the AES algorithm.
+ * 
+ * @param mode The AES cipher mode.
+ * @param state The state matrix.
+ * @param round The round key.
+ * @param nr The round number.
+ */
 void add_round_key(AES_CYPHER_T mode, unsigned char *state,
                    unsigned char *round, int nr)
 {
@@ -181,6 +251,13 @@ void add_round_key(AES_CYPHER_T mode, unsigned char *state,
     }
 }
 
+
+/**
+ * Performs the SubBytes operation in the AES algorithm.
+ * 
+ * @param mode The AES cipher mode.
+ * @param state The state matrix.
+ */
 void sub_bytes(AES_CYPHER_T mode, unsigned char *state)
 {
     int i, j;
@@ -194,6 +271,14 @@ void sub_bytes(AES_CYPHER_T mode, unsigned char *state)
     }
 }
 
+
+
+/**
+ * Performs the ShiftRows operation in the AES algorithm.
+ * 
+ * @param mode The AES cipher mode.
+ * @param state The state matrix.
+ */
 void shift_rows(AES_CYPHER_T mode, unsigned char *state)
 {
     unsigned char *s = (unsigned char *)state;
@@ -213,11 +298,34 @@ void shift_rows(AES_CYPHER_T mode, unsigned char *state)
     }
 }
 
+
+/**
+ * Performs the xtime operation on a given byte.
+ * @param x The byte to perform the xtime operation on.
+ * @return The result of the xtime operation.
+ */
 unsigned char xtime(unsigned char x)
 {
-    return ((x << 1) ^ (((x >> 7) & 1) * 0x1b));
+    // Left shift by 1 bit, equivalent to multiplying by 2
+    unsigned char result = x << 1;
+    
+    // Check if the highest bit of x is 1
+    // If the highest bit is 1, it indicates that the result will overflow,
+    // so we need to perform modulo 2 division (subtract 0x11b from the result)
+    if ((x >> 7) & 1) {
+        // Perform modulo 2 division by xoring with 0x1b
+        result ^= 0x1b;
+    }
+    
+    return result;
 }
 
+/**
+ * Repeat xtime operation ts times
+ * @param x The byte to perform the xtimes operation on.
+ * @param ts The number of times to perform the xtimes operation.
+ * @return The result of the xtimes operation.
+ */
 unsigned char xtimes(unsigned char x, int ts)
 {
     while (ts-- > 0)
@@ -228,6 +336,12 @@ unsigned char xtimes(unsigned char x, int ts)
     return x;
 }
 
+/**
+ * Performs the multiplication of two bytes using the Rijndael multiplication algorithm.
+ * @param x The first byte.
+ * @param y The second byte.
+ * @return The result of the multiplication.
+ */
 unsigned char mul(unsigned char x, unsigned char y)
 {
     /*
@@ -245,22 +359,40 @@ unsigned char mul(unsigned char x, unsigned char y)
             (((y >> 7) & 1) * xtimes(x, 7)));
 }
 
+/**
+ * Mixes the columns of the state matrix using the Rijndael MixColumns transformation.
+ * @param mode The AES cipher mode.
+ * @param state The state matrix.
+ */
 void mix_columns(AES_CYPHER_T mode, unsigned char *state)
 {
+    // The matrix used for the MixColumns operation
     unsigned char y[16] = {2, 3, 1, 1, 1, 2, 3, 1, 1, 1, 2, 3, 3, 1, 1, 2};
+    
+    // Temporary storage for the result of each column mixing
     unsigned char s[4];
+    
     int i, j, r;
 
+    // Iterate over each column of the state matrix
     for (i = 0; i < num_col[mode]; i++)
     {
+        // For each row in the column
         for (r = 0; r < 4; r++)
         {
+            // Initialize the value of the current row to 0
             s[r] = 0;
+            
+            // Perform the MixColumns operation on each byte in the row
             for (j = 0; j < 4; j++)
             {
+                // Multiply the byte in the state matrix by the corresponding value in the MixColumns matrix,
+                // and accumulate the result
                 s[r] = s[r] ^ mul(state[i * 4 + j], y[r * 4 + j]);
             }
         }
+        
+        // Copy the mixed column back to the state matrix
         for (r = 0; r < 4; r++)
         {
             state[i * 4 + r] = s[r];
@@ -268,6 +400,14 @@ void mix_columns(AES_CYPHER_T mode, unsigned char *state)
     }
 }
 
+
+/**
+ * Prints the hexadecimal representation of the data array.
+ * 
+ * @param msg The message to be displayed before the data.
+ * @param data The data array to be printed.
+ * @param len The length of the data array.
+ */
 void dump(char *msg, unsigned char *data, int len)
 {
     int i;
@@ -280,7 +420,14 @@ void dump(char *msg, unsigned char *data, int len)
     printf("\n");
 }
 
-// Add the encrypted result to the cyphertext list and convert to decimal
+/**
+ * Converts the data array to decimal representation and prints it.
+ * 
+ * @param msg The message to be displayed before the data.
+ * @param data The data array to be converted and printed.
+ * @param len The length of the data array.
+ * @return The decimal representation of the data array.
+ */
 unsigned char *outputtext(char *msg, unsigned char *data, int len)
 {
 
@@ -300,7 +447,7 @@ unsigned char *outputtext(char *msg, unsigned char *data, int len)
         printf("%d ", decimal_value);
     }
 
-    printf("\n\n################ %s ###############\n", msg);
+    printf("\n\n\n\n################ %s ###############\n", msg);
 
     for (int i = 0; i < len; i++)
     {
@@ -314,10 +461,22 @@ unsigned char *outputtext(char *msg, unsigned char *data, int len)
     return decimal_cypher;
 }
 
+
+/**
+ * Encrypts a block of data using the AES cipher algorithm.
+ *
+ * @param mode The AES cipher mode.
+ * @param data The input data to be encrypted.
+ * @param len The length of the input data.
+ * @param key The encryption key.
+ * @return The result of the encryption, including the encrypted data and the output buffer.
+ */
 CipherResult aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, unsigned char *key)
 {
+    // Allocate memory for the output buffer
     unsigned char *output = malloc(BLOCK_SIZE * sizeof(unsigned char));
-    unsigned char w[4 * 4 * 15] = {0}; /* round key */
+    // Array to store round keys
+    unsigned char w[4 * 4 * 15] = {0}; // round key
 
     int nr, i, j;
 
@@ -342,6 +501,7 @@ CipherResult aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, 
         {
 
             printf(" Round %d:\n", nr);
+            // Display the current state matrix
             dump("input", s, 4 * num_col[mode]);
 
             if (nr > 0)
@@ -369,23 +529,19 @@ CipherResult aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, 
             dump("  state", s, 4 * num_col[mode]);
         }
 
-                /* save state (cypher) to user buffer */
-                for (j = 0; j < 4 * num_col[mode]; j++)
-                    data[i + j] = s[j];
-                printf("Output:\n");
-                dump("cypher", &data[i], 4 * num_col[mode]);
-                outputtext("CIPHERTEXT", &data[i], 4 * num_col[mode]);
-        //     }
-
-        //     //
-        //     return output;
-        // }
+        /* save state (cypher) to user buffer */
+        for (j = 0; j < 4 * num_col[mode]; j++)
+            data[i + j] = s[j];
+        printf("Output:\n");
+        dump("cypher", &data[i], 4 * num_col[mode]);
+        outputtext("CIPHERTEXT", &data[i], 4 * num_col[mode]);
 
         /* save state (cypher) to output buffer */
         for (j = 0; j < 4 * 4; j++)
             output[i + j] = s[j];
     }
 
+    // Store the pointers to the data and output buffers in the result struct
     CipherResult result;
     result.data = data;
     result.output = output;
@@ -393,66 +549,127 @@ CipherResult aes_encrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, 
     return result;
 }
 
+
+
+
+/**
+ * Performs inverse shift rows operation on the state array.
+ * @param mode The AES cipher mode.
+ * @param state The state array.
+ */
 void inv_shift_rows(AES_CYPHER_T mode, unsigned char *state)
 {
+    // Cast the state pointer to unsigned char pointer
     unsigned char *s = (unsigned char *)state;
     int i, j, r;
 
+    // Iterate over each row of the state matrix, starting from the second row
     for (i = 1; i < num_col[mode]; i++)
     {
+        // Rotate each byte in the row to the right by its index
         for (j = 0; j < num_col[mode] - i; j++)
         {
+            // Store the byte to be rotated
             unsigned char tmp = s[i];
+            // Shift bytes in the row to the right
             for (r = 0; r < num_col[mode]; r++)
             {
                 s[i + r * 4] = s[i + (r + 1) * 4];
             }
+            // Place the stored byte at the end of the row
             s[i + (num_col[mode] - 1) * 4] = tmp;
         }
     }
 }
 
+
+
+/**
+ * Performs inverse substitution using the inverse S-box on the state array.
+ * @param val The value to be substituted.
+ * @return The substituted value.
+ */
 unsigned char inv_sub_sbox(unsigned char val)
 {
     return inv_sbox[val];
 }
 
+
+/**
+ * Performs inverse substitution using the inverse S-box on the state array.
+ * @param mode The AES cipher mode.
+ * @param state The state array.
+ */
 void inv_sub_bytes(AES_CYPHER_T mode, unsigned char *state)
 {
     int i, j;
 
+    // Iterate over each column of the state matrix
     for (i = 0; i < num_col[mode]; i++)
     {
+        // Iterate over each byte in the column
         for (j = 0; j < 4; j++)
         {
+            // Apply the inverse substitution operation to the byte
             state[i * 4 + j] = inv_sub_sbox(state[i * 4 + j]);
         }
     }
 }
 
+
+
+/**
+ * Performs inverse mix columns operation on the state array.
+ * @param mode The AES cipher mode.
+ * @param state The state array.
+ */
 void inv_mix_columns(AES_CYPHER_T mode, unsigned char *state)
 {
-    unsigned char y[16] = {0x0e, 0x0b, 0x0d, 0x09, 0x09, 0x0e, 0x0b, 0x0d,
-                           0x0d, 0x09, 0x0e, 0x0b, 0x0b, 0x0d, 0x09, 0x0e};
+    // The inverse MixColumns matrix
+    unsigned char y[16] = {0x0e, 0x0b, 0x0d, 0x09,
+                           0x09, 0x0e, 0x0b, 0x0d,
+                           0x0d, 0x09, 0x0e, 0x0b,
+                           0x0b, 0x0d, 0x09, 0x0e};
+    // Temporary storage for the result of each column mixing
     unsigned char s[4];
     int i, j, r;
 
+    // Iterate over each column of the state matrix
     for (i = 0; i < num_col[mode]; i++)
     {
+        // For each row in the column
         for (r = 0; r < 4; r++)
         {
+            // Initialize the value of the current row to 0
             s[r] = 0;
+            // Perform the inverse MixColumns operation on each byte in the row
             for (j = 0; j < 4; j++)
             {
+                // Multiply the byte in the state matrix by the corresponding value in the inverse MixColumns matrix,
+                // and accumulate the result
                 s[r] = s[r] ^ mul(state[i * 4 + j], y[r * 4 + j]);
             }
         }
+        // Copy the mixed column back to the state matrix
         for (r = 0; r < 4; r++)
         {
             state[i * 4 + r] = s[r];
         }
     }
 }
+
+
+
+
+/**
+ * Decrypts a block of data using the AES algorithm.
+ *
+ * @param mode The AES cypher mode.
+ * @param data The input data to be decrypted.
+ * @param len The length of the input data.
+ * @param key The encryption key.
+ * @return The result of the decryption, including the original data and the recovered plaintext.
+ */
 
 DecryptionResult aes_decrypt_block(AES_CYPHER_T mode, unsigned char *data, int len, unsigned char *key)
 {
@@ -516,52 +733,12 @@ DecryptionResult aes_decrypt_block(AES_CYPHER_T mode, unsigned char *data, int l
         dump("plain", &recovered[i], 4 * num_col[mode]);
         outputtext("RECOVERED PLAINTEXT", &recovered[i], 4 * num_col[mode]);
     }
-
+    
+    // Store the pointers to the data and recovered plaintext buffers in the result struct
     DecryptionResult result;
     result.data = data;
     result.recovered = recovered;
     return result;
 }
 
-void aes_cypher_128_test()
-{
-    printf("\nAES_CYPHER_128 encrypt test case:\n");
-    unsigned char buf[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-                           0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-    unsigned char key[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-                           0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
-    printf("Input:\n");
-    dump("data", buf, sizeof(buf));
-    dump("key ", key, sizeof(key));
-    aes_encrypt_block(AES_CYPHER_128, buf, sizeof(buf), key);
-
-    printf("\nAES_CYPHER_128 decrypt test case:\n");
-    printf("Input:\n");
-    dump("data", buf, sizeof(buf));
-    dump("key ", key, sizeof(key));
-    aes_decrypt_block(AES_CYPHER_128, buf, sizeof(buf), key);
-}
-
-// #if 1
-//   unsigned char buf[] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-//                          0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
-//   unsigned char key[] = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
-//                          0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
-// #else
-//   unsigned char buf[] = {0x32, 0x43, 0xf6, 0xa8, 0x88, 0x5a, 0x30, 0x8d,
-//                          0x31, 0x31, 0x98, 0xa2, 0xe0, 0x37, 0x07, 0x34};
-//   unsigned char key[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6,
-//                          0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c};
-// #endif
-
-//   printf("\nAES_CYPHER_128 encrypt test case:\n");
-//   printf("Input:\n");
-//   dump("data", buf, sizeof(buf));
-//   dump("key ", key, sizeof(key));
-//   aes_encrypt_block(AES_CYPHER_128, buf, sizeof(buf), key);
-
-//   printf("\nAES_CYPHER_128 decrypt test case:\n");
-//   printf("Input:\n");
-//   dump("data", buf, sizeof(buf));
-//   dump("key ", key, sizeof(key));
